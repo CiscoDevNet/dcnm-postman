@@ -1042,6 +1042,52 @@
 			"name": "Network Operations",
 			"item": [
 				{
+					"name": "get network id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = JSON.parse(responseBody);",
+									"postman.setEnvironmentVariable(\"network_id_number\", jsonData[\"segmentId\"]);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Dcnm-Token",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{dcnm}}/rest/managed-pool/fabrics/{{fabric}}/segments/ids",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"managed-pool",
+								"fabrics",
+								"{{fabric}}",
+								"segments",
+								"ids"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "get proposed network vlan",
 					"event": [
 						{
@@ -1083,6 +1129,127 @@
 							]
 						},
 						"description": "Uses DCNM's resource manager to gather a network VLAN that is currently not in use within the system.  This returns a single value in the body upon a successful request, which then uses a JS test to populate the `network_vlan_id` ENV var"
+					},
+					"response": []
+				},
+				{
+					"name": "create network",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"name": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "dcnm-token",
+								"value": "{{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n   \"fabric\":\"{{fabric}}\",\n   \"vrf\":\"{{vrf}}\",\n   \"networkName\":\"{{network}}\",\n   \"networkId\":\"{{network_id_number}}\",\n   \"networkTemplateConfig\":\"{\\\"gatewayIpAddress\\\":\\\"10.3.4.1/24\\\", \\\"vlanId\\\":\\\"{{network_vlan_id}}\\\"}\",\n   \"networkTemplate\":\"Default_Network_Universal\",\n   \"networkExtensionTemplate\":\"Default_Network_Extension_Universal\"\n}"
+						},
+						"url": {
+							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/networks",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"top-down",
+								"fabrics",
+								"{{fabric}}",
+								"networks"
+							],
+							"query": [
+								{
+									"key": "dcnm-token",
+									"value": "{{token}}",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Creates a new network with the unused VLAN ID in the fabric named within the URI path.  \n\n_Note: `{{ network_id_number }}` is defined as an ENV var, but will need to be changed if more than one network is created on DCNM._"
+					},
+					"response": []
+				},
+				{
+					"name": "attach network to switches",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"type": "text",
+								"value": "application/json"
+							},
+							{
+								"key": "dcnm-token",
+								"type": "text",
+								"value": "{{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"networkName\": \"{{network}}\",\n        \"lanAttachList\": [\n            {\n                \"fabric\": \"{{fabric}}\",\n                \"networkName\": \"{{network}}\",\n                \"serialNumber\": \"9FZQF5326F2\",\n                \"vlan\": \"{{network_vlan_id}}\",\n                \"dot1QVlan\": 1,\n                \"untagged\": false,\n                \"freeformConfig\": \"\",\n                \"deployment\": true\n            }\n        ]\n    }\n]"
+						},
+						"url": {
+							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/networks/attachments",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"top-down",
+								"fabrics",
+								"{{fabric}}",
+								"networks",
+								"attachments"
+							]
+						},
+						"description": "Attaches the created network to the leaf switches defined within the payload of the request.  \n\n_Please ensure proper serial numbers and \"edge-facing\" ports are referenced in the payload_"
+					},
+					"response": []
+				},
+				{
+					"name": "deploy network",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "dcnm-token",
+								"value": "{{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/networks/{{network}}/deploy",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"top-down",
+								"fabrics",
+								"{{fabric}}",
+								"networks",
+								"{{network}}",
+								"deploy"
+							]
+						},
+						"description": "Used to deploy the pending config a Network under the selected fabric.  Requires network to be created and attached for successful deployment to fabric"
 					},
 					"response": []
 				},
@@ -1163,127 +1330,6 @@
 					"response": []
 				},
 				{
-					"name": "create network",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"name": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "dcnm-token",
-								"value": "{{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n   \"fabric\":\"{{fabric}}\",\n   \"vrf\":\"{{vrf}}\",\n   \"networkName\":\"{{network}}\",\n   \"networkId\":\"{{network_id_number}}\",\n   \"networkTemplateConfig\":\"{\\\"gatewayIpAddress\\\":\\\"10.3.4.1/24\\\", \\\"vlanId\\\":\\\"{{network_vlan_id}}\\\"}\",\n   \"networkTemplate\":\"Default_Network_Universal\",\n   \"networkExtensionTemplate\":\"Default_Network_Extension_Universal\"\n}"
-						},
-						"url": {
-							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/networks",
-							"protocol": "https",
-							"host": [
-								"{{dcnm}}"
-							],
-							"path": [
-								"rest",
-								"top-down",
-								"fabrics",
-								"{{fabric}}",
-								"networks"
-							],
-							"query": [
-								{
-									"key": "dcnm-token",
-									"value": "{{token}}",
-									"disabled": true
-								}
-							]
-						},
-						"description": "Creates a new network with the unused VLAN ID in the fabric named within the URI path.  \n\n_Note: `{{ network_id_number }}` is defined as an ENV var, but will need to be changed if more than one network is created on DCNM._"
-					},
-					"response": []
-				},
-				{
-					"name": "attach network to switches",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"type": "text",
-								"value": "application/json"
-							},
-							{
-								"key": "dcnm-token",
-								"type": "text",
-								"value": "{{token}}"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "[\n    {\n        \"networkName\": \"{{network}}\",\n        \"lanAttachList\": [\n            {\n                \"fabric\": \"{{fabric}}\",\n                \"networkName\": \"{{network}}\",\n                \"serialNumber\": \"FDO221516D9\",\n                \"switchPorts\": \"Port-channel1\",\n                \"vlan\": \"{{network_vlan_id}}\",\n                \"dot1QVlan\": 1,\n                \"untagged\": false,\n                \"freeformConfig\": \"\",\n                \"deployment\": true\n            },\n            {\n                \"fabric\": \"{{fabric}}\",\n                \"networkName\": \"{{network}}\",\n                \"serialNumber\": \"FDO220925TL\",\n                \"switchPorts\": \"Port-channel1\",\n                \"vlan\": \"{{network_vlan_id}}\",\n                \"dot1QVlan\": 1,\n                \"untagged\": false,\n                \"freeformConfig\": \"\",\n                \"deployment\": true\n            }\n        ]\n    }\n]"
-						},
-						"url": {
-							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/networks/attachments",
-							"protocol": "https",
-							"host": [
-								"{{dcnm}}"
-							],
-							"path": [
-								"rest",
-								"top-down",
-								"fabrics",
-								"{{fabric}}",
-								"networks",
-								"attachments"
-							]
-						},
-						"description": "Attaches the created network to the leaf switches defined within the payload of the request.  \n\n_Please ensure proper serial numbers and \"edge-facing\" ports are referenced in the payload_"
-					},
-					"response": []
-				},
-				{
-					"name": "deploy network",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "dcnm-token",
-								"value": "{{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/networks/{{network}}/deploy",
-							"protocol": "https",
-							"host": [
-								"{{dcnm}}"
-							],
-							"path": [
-								"rest",
-								"top-down",
-								"fabrics",
-								"{{fabric}}",
-								"networks",
-								"{{network}}",
-								"deploy"
-							]
-						},
-						"description": "Used to deploy the pending config a Network under the selected fabric.  Requires network to be created and attached for successful deployment to fabric"
-					},
-					"response": []
-				},
-				{
 					"name": "delete network",
 					"request": {
 						"method": "DELETE",
@@ -1350,7 +1396,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"policy\": \"int_trunk_host_11_1\",\n    \"interfaces\": [\n        {\n            \"serialNumber\": \"FDO221516D9\",\n            \"interfaceType\": \"INTERFACE_ETHERNET\",\n            \"ifName\": \"Ethernet1/22\",\n            \"fabricName\": \"{{fabric}}\",\n            \"nvPairs\": {\n                \"BPDUGUARD_ENABLED\": \"no\",\n                \"PORTTYPE_FAST_ENABLED\": true,\n                \"MTU\": \"jumbo\",\n                \"SPEED\": \"Auto\",\n                \"ALLOWED_VLANS\": \"none\",\n                \"DESC\": \"\",\n                \"CONF\": \" ttag\\n ttag-strip\\n description test\",\n                \"ADMIN_STATE\": true,\n                \"INTF_NAME\": \"Ethernet1/22\"\n            }\n        }\n    ]\n}"
+							"raw": "{\n    \"policy\": \"int_trunk_host_11_1\",\n    \"interfaces\": [\n        {\n            \"serialNumber\": \"9FZQF5326F2\",\n            \"interfaceType\": \"INTERFACE_ETHERNET\",\n            \"ifName\": \"Ethernet1/22\",\n            \"fabricName\": \"{{fabric}}\",\n            \"nvPairs\": {\n                \"BPDUGUARD_ENABLED\": \"no\",\n                \"PORTTYPE_FAST_ENABLED\": true,\n                \"MTU\": \"jumbo\",\n                \"SPEED\": \"Auto\",\n                \"ALLOWED_VLANS\": \"none\",\n                \"DESC\": \"\",\n                \"CONF\": \" ttag\\n ttag-strip\\n description test\",\n                \"ADMIN_STATE\": true,\n                \"INTF_NAME\": \"Ethernet1/22\"\n            }\n        }\n    ]\n}"
 						},
 						"url": {
 							"raw": "https://{{dcnm}}/rest/interface/",
@@ -1453,7 +1499,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"policy\": \"int_loopback_11_1\",\n    \"interfaceType\": \"INTERFACE_LOOPBACK\",\n    \"interfaces\": [\n        {\n            \"serialNumber\": \"FDO22120N0T\",\n            \"interfaceType\": \"INTERFACE_LOOPBACK\",\n            \"ifName\": \"Loopback10\",\n            \"fabricName\": \"{{fabric}}\",\n            \"nvPairs\": {\n                \"INTF_VRF\": \"{{vrf}}\",\n                \"IP\": \"10.10.10.10\",\n                \"V6IP\": \"101::101\",\n                \"ROUTE_MAP_TAG\": \"12345\",\n                \"DESC\": \"\",\n                \"CONF\": \"\",\n                \"ADMIN_STATE\": true,\n                \"INTF_NAME\": \"Loopback10\"\n            }\n        }\n    ],\n    \"skipResourceCheck\": false\n}"
+							"raw": "{\n    \"policy\": \"int_loopback_11_1\",\n    \"interfaceType\": \"INTERFACE_LOOPBACK\",\n    \"interfaces\": [\n        {\n            \"serialNumber\": \"98KPNK25LAJ\",\n            \"interfaceType\": \"INTERFACE_LOOPBACK\",\n            \"ifName\": \"Loopback10\",\n            \"fabricName\": \"{{fabric}}\",\n            \"nvPairs\": {\n                \"INTF_VRF\": \"{{vrf}}\",\n                \"IP\": \"10.10.10.10\",\n                \"V6IP\": \"101::101\",\n                \"ROUTE_MAP_TAG\": \"12345\",\n                \"DESC\": \"\",\n                \"CONF\": \"\",\n                \"ADMIN_STATE\": true,\n                \"INTF_NAME\": \"Loopback10\"\n            }\n        }\n    ],\n    \"skipResourceCheck\": false\n}"
 						},
 						"url": {
 							"raw": "https://{{dcnm}}/rest/interface",
@@ -1556,7 +1602,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "[\n    {\n        \"serialNumber\": \"FDO221516D9\",\n        \"ifName\": \"Ethernet1/22\"\n    }\n]"
+							"raw": "[\n    {\n        \"serialNumber\": \"98KPNK25LAJ\",\n        \"ifName\": \"Loopback10\"\n    }\n]"
 						},
 						"url": {
 							"raw": "https://{{dcnm}}/rest/interface/deploy",
@@ -1577,9 +1623,15 @@
 					"name": "query inteface",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Dcnm-Token",
+								"value": "{{token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "https://{{dcnm}}/rest/interface?serialNumber=FDO221516D9&ifName=Ethernet1%2F11",
+							"raw": "https://{{dcnm}}/rest/interface?serialNumber=98KPNK25LAJ&ifName=Loopback10",
 							"protocol": "https",
 							"host": [
 								"{{dcnm}}"
@@ -1591,11 +1643,11 @@
 							"query": [
 								{
 									"key": "serialNumber",
-									"value": "FDO221516D9"
+									"value": "98KPNK25LAJ"
 								},
 								{
 									"key": "ifName",
-									"value": "Ethernet1%2F11"
+									"value": "Loopback10"
 								}
 							]
 						},
@@ -1811,6 +1863,176 @@
 					"response": []
 				},
 				{
+					"name": "get proposed vrf vlan",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"postman.setEnvironmentVariable(\"vrf_vlan_id\", responseBody);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "dcnm-token",
+								"value": "{{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://{{dcnm}}/rest/resource-manager/vlan/{{fabric}}?vlanUsageType=TOP_DOWN_VRF_VLAN",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"resource-manager",
+								"vlan",
+								"{{fabric}}"
+							],
+							"query": [
+								{
+									"key": "vlanUsageType",
+									"value": "TOP_DOWN_VRF_VLAN"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create vrf",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "dcnm-token",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fabric\": \"{{fabric}}\",\n    \"vrfName\": \"{{vrf}}\",\n    \"vrfId\": \"{{vrf_id_number}}\",\n    \"vrfTemplate\": \"Default_VRF_Universal\",\n    \"vrfTemplateConfig\": \"{\\\"vrfVlanName\\\":\\\"\\\",\\\"vrfIntfDescription\\\":\\\"\\\",\\\"vrfDescription\\\":\\\"\\\",\\\"ipv6LinkLocalFlag\\\":true,\\\"mtu\\\":\\\"9216\\\",\\\"tag\\\":\\\"12345\\\",\\\"vrfRouteMap\\\":\\\"FABRIC-RMAP-REDIST-SUBNET\\\",\\\"maxBgpPaths\\\":\\\"1\\\",\\\"maxIbgpPaths\\\":\\\"2\\\",\\\"vrfSegmentId\\\":\\\"{{vrf_id_number}}\\\",\\\"vrfName\\\":\\\"{{vrf}}\\\",\\\"vrfVlanId\\\":\\\"{{vrf_vlan_id}}\\\",\\\"nveId\\\":1,\\\"asn\\\":\\\"null\\\"}\",\n    \"vrfExtensionTemplate\": \"Default_VRF_Extension_Universal\",\n    \"source\": null,\n    \"serviceVrfTemplate\": null\n}"
+						},
+						"url": {
+							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/vrfs",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"top-down",
+								"fabrics",
+								"{{fabric}}",
+								"vrfs"
+							]
+						},
+						"description": "Creates a VRF within the fabric defined in the URI."
+					},
+					"response": []
+				},
+				{
+					"name": "create vrf attachments",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "dcnm-token",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"vrfName\": \"{{vrf}}\",\n        \"lanAttachList\": [\n            {\n                \"fabric\": \"{{fabric}}\",\n                \"vrfName\": \"{{vrf}}\",\n                \"vlan\": \"{{vrf_vlan_id}}\",\n                \"freeformConfig\": \"\",\n                \"serialNumber\": \"98KPNK25LAJ\",\n                \"deployment\": true,\n                \"extensionValues\": \"{\\\"VRF_LITE_CONN\\\":\\\"{\\\\\\\"VRF_LITE_CONN\\\\\\\":[]}\\\",\\\"MULTISITE_CONN\\\":\\\"{\\\\\\\"MULTISITE_CONN\\\\\\\":[]}\\\"}\",\n                \"instanceValues\": \"{\\\"loopbackId\\\":\\\"\\\",\\\"loopbackIpAddress\\\":\\\"\\\",\\\"loopbackIpV6Address\\\":\\\"\\\"}\"\n            }\n        ]\n    }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/vrfs/attachments",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"top-down",
+								"fabrics",
+								"{{fabric}}",
+								"vrfs",
+								"attachments"
+							]
+						},
+						"description": "This specific payload creates a VRF-lite switch attachment"
+					},
+					"response": []
+				},
+				{
+					"name": "deploy vrf",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "dcnm-token",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vrfNames\": \"{{vrf}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/vrfs/deployments",
+							"protocol": "https",
+							"host": [
+								"{{dcnm}}"
+							],
+							"path": [
+								"rest",
+								"top-down",
+								"fabrics",
+								"{{fabric}}",
+								"vrfs",
+								"deployments"
+							]
+						},
+						"description": "Deploys the previously created VRF to the fabric defined in the URI"
+					},
+					"response": []
+				},
+				{
 					"name": "get vrf lite dot1q id",
 					"event": [
 						{
@@ -1839,7 +2061,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"scopeType\": \"DeviceInterface\",\n    \"usageType\": \"TOP_DOWN_L3_DOT1Q\",\n    \"allocatedTo\": \"{{vrf}}\",\n    \"serialNumber\": \"9GNSW5DCTEZ\",\n    \"ifName\": \"Ethernet1/21\"\n}",
+							"raw": "{\n    \"scopeType\": \"DeviceInterface\",\n    \"usageType\": \"TOP_DOWN_L3_DOT1Q\",\n    \"allocatedTo\": \"{{vrf}}\",\n    \"serialNumber\": \"9O10EUPLJZ9\",\n    \"ifName\": \"Ethernet1/21\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1942,88 +2164,6 @@
 					"response": []
 				},
 				{
-					"name": "create vrf",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "dcnm-token",
-								"value": "{{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"fabric\": \"{{fabric}}\",\n    \"vrfName\": \"{{vrf}}\",\n    \"vrfId\": \"{{vrf_id_number}}\",\n    \"vrfTemplate\": \"Default_VRF_Universal\",\n    \"vrfTemplateConfig\": \"{\\\"vrfVlanName\\\":\\\"\\\",\\\"vrfIntfDescription\\\":\\\"\\\",\\\"vrfDescription\\\":\\\"\\\",\\\"ipv6LinkLocalFlag\\\":true,\\\"mtu\\\":\\\"9216\\\",\\\"tag\\\":\\\"12345\\\",\\\"vrfRouteMap\\\":\\\"FABRIC-RMAP-REDIST-SUBNET\\\",\\\"maxBgpPaths\\\":\\\"1\\\",\\\"maxIbgpPaths\\\":\\\"2\\\",\\\"vrfSegmentId\\\":\\\"{{vrf_id_number}}\\\",\\\"vrfName\\\":\\\"{{vrf}}\\\",\\\"vrfVlanId\\\":\\\"2005\\\",\\\"nveId\\\":1,\\\"asn\\\":\\\"null\\\"}\",\n    \"vrfExtensionTemplate\": \"Default_VRF_Extension_Universal\",\n    \"source\": null,\n    \"serviceVrfTemplate\": null\n}"
-						},
-						"url": {
-							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/vrfs",
-							"protocol": "https",
-							"host": [
-								"{{dcnm}}"
-							],
-							"path": [
-								"rest",
-								"top-down",
-								"fabrics",
-								"{{fabric}}",
-								"vrfs"
-							]
-						},
-						"description": "Creates a VRF within the fabric defined in the URI."
-					},
-					"response": []
-				},
-				{
-					"name": "deploy vrf",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "dcnm-token",
-								"value": "{{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"vrfNames\": \"{{vrf}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/vrfs/deployments",
-							"protocol": "https",
-							"host": [
-								"{{dcnm}}"
-							],
-							"path": [
-								"rest",
-								"top-down",
-								"fabrics",
-								"{{fabric}}",
-								"vrfs",
-								"deployments"
-							]
-						},
-						"description": "Deploys the previously created VRF to the fabric defined in the URI"
-					},
-					"response": []
-				},
-				{
 					"name": "query vrf attachments",
 					"request": {
 						"method": "GET",
@@ -2100,50 +2240,6 @@
 							]
 						},
 						"description": "This specific payload creates a multi-site extension VRF switch attachment within DCNM"
-					},
-					"response": []
-				},
-				{
-					"name": "create vrf lite attachments",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "dcnm-token",
-								"value": "{{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "[\n    {\n        \"vrfName\": \"{{vrf}}\",\n        \"lanAttachList\": [\n            {\n                \"fabric\": \"{{fabric}}\",\n                \"vrfName\": \"{{vrf}}\",\n                \"vlan\": \"{{vrf_dot1q_vlan}}\",\n                \"freeformConfig\": \"\",\n                \"serialNumber\": \"95V4MNBD0TC\",\n                \"deployment\": true,\n                \"extensionValues\": \"{\\\"VRF_LITE_CONN\\\":\\\"{\\\\\\\"VRF_LITE_CONN\\\\\\\":[{\\\\\\\"IF_NAME\\\\\\\":\\\\\\\"Ethernet1/3\\\\\\\",\\\\\\\"DOT1Q_ID\\\\\\\":\\\\\\\"{{vrf_dot1q_vlan}}\\\\\\\",\\\\\\\"IP_MASK\\\\\\\":\\\\\\\"10.33.0.1/30\\\\\\\",\\\\\\\"NEIGHBOR_IP\\\\\\\":\\\\\\\"10.33.0.2\\\\\\\",\\\\\\\"NEIGHBOR_ASN\\\\\\\":\\\\\\\"65301\\\\\\\",\\\\\\\"IPV6_MASK\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"IPV6_NEIGHBOR\\\\\\\":\\\\\\\"\\\\\\\",\\\\\\\"AUTO_VRF_LITE_FLAG\\\\\\\":\\\\\\\"true\\\\\\\",\\\\\\\"PEER_VRF_NAME\\\\\\\":\\\\\\\"{{vrf}}\\\\\\\",\\\\\\\"VRF_LITE_JYTHON_TEMPLATE\\\\\\\":\\\\\\\"Ext_VRF_Lite_Jython\\\\\\\"}]}\\\",\\\"MULTISITE_CONN\\\":\\\"{\\\\\\\"MULTISITE_CONN\\\\\\\":[]}\\\"}\",\n                \"instanceValues\": \"{\\\"loopbackId\\\":\\\"\\\",\\\"loopbackIpAddress\\\":\\\"\\\",\\\"loopbackIpV6Address\\\":\\\"\\\"}\"\n            }\n        ]\n    }\n]",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "https://{{dcnm}}/rest/top-down/fabrics/{{fabric}}/vrfs/attachments",
-							"protocol": "https",
-							"host": [
-								"{{dcnm}}"
-							],
-							"path": [
-								"rest",
-								"top-down",
-								"fabrics",
-								"{{fabric}}",
-								"vrfs",
-								"attachments"
-							]
-						},
-						"description": "This specific payload creates a VRF-lite switch attachment"
 					},
 					"response": []
 				},
@@ -2445,10 +2541,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"content\": \"##template properties \\nname=telemetry_config;\\ndescription = ;\\ntags = ;\\nuserDefined = true;\\nsupportedPlatforms = All;\\ntemplateType = POLICY;\\ntemplateSubType = DEVICE;\\ncontentType = TEMPLATE_CLI;\\nimplements = implements;\\ndependencies = ;\\npublished = false;\\n##\\n##template variables\\n @(DisplayName=\\\"Certificate Path\\\", Description=\\\"Location of certificate for telemetry export\\\")\\nstring CRT_PATH;\\n\\n##\\n##template content\\ntelemetry\\n certificate $$CRT_PATH$$ telegraf\\n destination-profile\\n use-vrf management\\n destination-group 1\\n ip address 10.195.225.176 port 57000 protocol gRPC encoding GPB\\n sensor-group 1\\n data-source DME\\n path sys/ch depth unbounded\\n subscription 1\\n dst-grp 1\\n snsr-grp 1 sample-interval 10000\\n##\"\n}"
+							"raw": "{\n    \"templatename\": \"telemetry_config\",\n    \"content\": \"##template properties \\nname=telemetry_config;\\ndescription = ;\\ntags = ;\\nuserDefined = true;\\nsupportedPlatforms = All;\\ntemplateType = POLICY;\\ntemplateSubType = DEVICE;\\ncontentType = TEMPLATE_CLI;\\nimplements = implements;\\ndependencies = ;\\npublished = false;\\n##\\n##template variables\\n @(DisplayName=\\\"Certificate Path\\\", Description=\\\"Location of certificate for telemetry export\\\")\\nstring CRT_PATH;\\n\\n##\\n##template content\\ntelemetry\\n certificate $$CRT_PATH$$ telegraf\\n destination-profile\\n use-vrf management\\n destination-group 1\\n ip address 10.195.225.176 port 57000 protocol gRPC encoding GPB\\n sensor-group 1\\n data-source DME\\n path sys/ch depth unbounded\\n subscription 1\\n dst-grp 1\\n snsr-grp 1 sample-interval 10000\\n##\"\n}"
 						},
 						"url": {
-							"raw": "https://{{dcnm}}/rest/config/templates/telemetry_config",
+							"raw": "https://{{dcnm}}/rest/config/templates/template",
 							"protocol": "https",
 							"host": [
 								"{{dcnm}}"
@@ -2457,7 +2553,7 @@
 								"rest",
 								"config",
 								"templates",
-								"telemetry_config"
+								"template"
 							]
 						},
 						"description": "Creates a configuration template within DCNM using the verified configuration data from the verification step"
@@ -2595,7 +2691,7 @@
 							}
 						],
 						"url": {
-							"raw": "https://{{dcnm}}/rest/control/policies/switches?serialNumber=9FXMD0HF6F3",
+							"raw": "https://{{dcnm}}/rest/control/policies/switches?serialNumber=9BF0U5TA3GI",
 							"protocol": "https",
 							"host": [
 								"{{dcnm}}"
@@ -2609,7 +2705,7 @@
 							"query": [
 								{
 									"key": "serialNumber",
-									"value": "9FXMD0HF6F3"
+									"value": "9BF0U5TA3GI"
 								}
 							]
 						},
@@ -2635,7 +2731,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"source\": \"\",\n    \"serialNumber\": \"9M7JYFZ2HEH\",\n    \"entityType\": \"SWITCH\",\n    \"entityName\": \"SWITCH\",\n    \"templateName\": \"telemetry_config\",\n    \"priority\": \"500\",\n    \"description\": \"created from ansible\",\n    \"nvPairs\": {}\n}\n"
+							"raw": "{\n    \"source\": \"\",\n    \"serialNumber\": \"9BF0U5TA3GI\",\n    \"entityType\": \"SWITCH\",\n    \"entityName\": \"SWITCH\",\n    \"templateName\": \"telemetry_config\",\n    \"priority\": \"500\",\n    \"description\": \"created from Postman\",\n    \"nvPairs\": {\n      \"CRT_PATH\": \"/bootflash/telegraf.crt\"\n      }\n}\n"
 						},
 						"url": {
 							"raw": "https://{{dcnm}}/rest/control/policies",
@@ -2671,7 +2767,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "[\n    \"{{policy_id_number}}\"\n]"
+							"raw": "[\n    \"POLICY-88640\"\n]"
 						},
 						"url": {
 							"raw": "https://{{dcnm}}/rest/control/policies/deploy",
